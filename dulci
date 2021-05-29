@@ -1,0 +1,57 @@
+#!/bin/bash
+
+# Lincoln Teixeira Gomes - lincolnteixeiragomes@gmail.com
+# apt-get install poppler-utils
+
+serie=$1
+week=$2
+#dir="/dulci"
+dir="/root"
+
+if [ $# -eq 0 ]; then
+   echo "Informe a serie!!"
+   exit 0
+fi
+
+if [ ${#week} -eq 1 ]; then
+   week="0${week}"
+fi
+
+
+if [ $serie -eq 1 ]; then
+    subjects="arte educacao_fisica geografia historia lingua_portuguesa matematica biologia educacao_financeira filosofia fisica lingua_espanhola quimica sociologia"
+elif [ $serie -eq 2 ]; then
+    subjects="arte educacao_fisica geografia historia lingua_portuguesa matematica biologia educacao_financeira filosofia fisica lingua_espanhola quimica sociologia"
+elif [ $serie -eq 3 ]; then
+    subjects="arte educacao_fisica geografia historia lingua_portuguesa matematica biologia educacao_financeira filosofia fisica lingua_espanhola quimica sociologia"
+elif [ $serie -eq 6 ]; then
+    subjects="arte ciencias educacao_fisica ensino_religioso geografia historia lingua_inglesa lingua_portuguesa matematica"
+elif [ $serie -eq 7 ]; then
+        subjects="arte ciencias educacao_fisica ensino_religioso geografia historia lingua_inglesa lingua_portuguesa matematica"
+elif [ $serie -eq 8 ]; then
+    subjects="arte ciencias educacao_fisica geografia historia lingua_inglesa lingua_portuguesa matematica"
+elif [ $serie -eq 9 ]; then
+    subjects="arte ciencias educacao_fisica geografia historia lingua_inglesa lingua_portuguesa matematica"
+else
+        echo "Serie não cadastrada no momento!"
+fi
+
+for subject in $subjects; do
+   echo "Baixando $subject..."
+   code=$(wget "http://www.aulaparana.pr.gov.br/${subject}_${serie}ano" -O site 2> /dev/null; grep -B4 drive site | grep -A4 Semana | egrep '(PDF para impress|Semana)' | sed 's/<p>//' | sed ':a; N; s/\n/ /; ta' | sed 's/<\/p>/\n/g' | awk '{print $1,$2,$8}' | awk 'NF>0' | grep "Semana ${week}" | awk -F"/" '{print $6}' | tail -1)
+   if [ "$code" = "" ];then
+
+       code=$(wget "http://www.aulaparana.pr.gov.br/${subject}_${serie}serie" -O site 2> /dev/null; grep -B4 drive site | grep -A4 Semana | egrep '(PDF para impress|Semana)' | sed 's/<p>//' | sed ':a; N; s/\n/ /; ta' | sed 's/<\/p>/\n/g' | awk '{print $1,$2,$8}' | awk 'NF>0' | grep "Semana ${week}" | awk -F"/" '{print $6}' | tail -1)
+   fi
+if [ "$code" = "" ];then
+continue;
+fi
+
+   echo "Code: $code"
+   wget --load-cookies /tmp/cookies.txt "https://docs.google.com/uc?export=download&confirm=$(wget --quiet --save-cookies /tmp/cookies.txt --keep-session-cookies --no-check-certificate 'https://docs.google.com/uc?export=download&id=$code' -O- | sed -rn 's/.*confirm=([0-9A-Za-z_]+).*/\1\n/p')&id=$code" -O ${dir}/${subject}_serie${serie}_semana${week}.pdf && rm -rf /tmp/cookies.txt
+   rm -f site
+done
+
+pdfunite $(ls ${dir}/*[0-9].pdf) ${dir}/ano${serie}_semana${week}_kit.pdf
+#rm -f ${dir}/*[0-9].pdf
+#mv ${dir}/ano${serie}_semana${week}_kit.pdf /home/admin/Área\ de\ Trabalho/dulci/ano${serie}_semana${week}_kit.pdf
