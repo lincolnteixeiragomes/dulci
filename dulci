@@ -5,8 +5,12 @@
 
 serie=$1
 week=$2
-#dir="/dulci"
-dir="/root"
+dir=$3
+
+if [ "$dir" = "" ];then
+    dir="$PWD"	
+fi
+
 
 if [ $# -eq 0 ]; then
    echo "Informe a serie!!"
@@ -33,25 +37,42 @@ elif [ $serie -eq 8 ]; then
 elif [ $serie -eq 9 ]; then
     subjects="arte ciencias educacao_fisica geografia historia lingua_inglesa lingua_portuguesa matematica"
 else
-        echo "Serie não cadastrada no momento!"
+    echo "Serie não cadastrada no momento!"
 fi
 
-for subject in $subjects; do
-   echo "Baixando $subject..."
-   code=$(wget "http://www.aulaparana.pr.gov.br/${subject}_${serie}ano" -O site 2> /dev/null; grep -B4 drive site | grep -A4 Semana | egrep '(PDF para impress|Semana)' | sed 's/<p>//' | sed ':a; N; s/\n/ /; ta' | sed 's/<\/p>/\n/g' | awk '{print $1,$2,$8}' | awk 'NF>0' | grep "Semana ${week}" | awk -F"/" '{print $6}' | tail -1)
-   if [ "$code" = "" ];then
-
-       code=$(wget "http://www.aulaparana.pr.gov.br/${subject}_${serie}serie" -O site 2> /dev/null; grep -B4 drive site | grep -A4 Semana | egrep '(PDF para impress|Semana)' | sed 's/<p>//' | sed ':a; N; s/\n/ /; ta' | sed 's/<\/p>/\n/g' | awk '{print $1,$2,$8}' | awk 'NF>0' | grep "Semana ${week}" | awk -F"/" '{print $6}' | tail -1)
-   fi
-if [ "$code" = "" ];then
-continue;
-fi
-
-   echo "Code: $code"
-   wget --load-cookies /tmp/cookies.txt "https://docs.google.com/uc?export=download&confirm=$(wget --quiet --save-cookies /tmp/cookies.txt --keep-session-cookies --no-check-certificate 'https://docs.google.com/uc?export=download&id=$code' -O- | sed -rn 's/.*confirm=([0-9A-Za-z_]+).*/\1\n/p')&id=$code" -O ${dir}/${subject}_serie${serie}_semana${week}.pdf && rm -rf /tmp/cookies.txt
-   rm -f site
+echo ""
+echo "Processing [$serie] grade [$week] week"
+echo "------------------------------------------------------------------------------------------------------------------------"
+for subject in $subjects; do   
+    code=$(curl http://www.aulaparana.pr.gov.br/${subject}_${serie}ano 2> /dev/null | grep -B4 drive | grep -A4 Semana | egrep '(PDF para impress|Semana)' | sed 's/<p>//' | sed ':a; N; s/\n/ /; ta' | sed 's/<\/p>/\n/g' | awk '{print $1,$2,$8}' | awk 'NF>0' | grep "Semana ${week}" | awk -F"/" '{print $6}' | tail -1)
+    if [ "$code" = "" ];then
+        code=$(curl http://www.aulaparana.pr.gov.br/${subject}_${serie}serie 2> /dev/null | grep -B4 drive | grep -A4 Semana | egrep '(PDF para impress|Semana)' | sed 's/<p>//' | sed ':a; N; s/\n/ /; ta' | sed 's/<\/p>/\n/g' | awk '{print $1,$2,$8}' | awk 'NF>0' | grep "Semana ${week}" | awk -F"/" '{print $6}' | tail -1)
+    fi
+	if [ "$code" = "" ];then
+	    echo "Problem to detect code for [$subject]"
+		continue;
+	fi
+    echo "Downloading [https://docs.google.com/uc?export=download&id=$code] - [${subject^^}] "
+    wget --load-cookies /tmp/cookies.txt "https://docs.google.com/uc?export=download&confirm=$(wget --quiet --save-cookies /tmp/cookies.txt --keep-session-cookies --no-check-certificate 'https://docs.google.com/uc?export=download&id=$code' -O- | sed -rn 's/.*confirm=([0-9A-Za-z_]+).*/\1\n/p')&id=$code" -O /tmp/${subject}_serie${serie}_semana${week}.pdf 2>> /tmp/dulci.log && rm -rf /tmp/cookies.txt
 done
+echo "------------------------------------------------------------------------------------------------------------------------"
 
-pdfunite $(ls ${dir}/*[0-9].pdf) ${dir}/ano${serie}_semana${week}_kit.pdf
-#rm -f ${dir}/*[0-9].pdf
-#mv ${dir}/ano${serie}_semana${week}_kit.pdf /home/admin/Área\ de\ Trabalho/dulci/ano${serie}_semana${week}_kit.pdf
+pdfunite $(ls /tmp/*[0-9].pdf 2> /dev/null) /tmp/ano${serie}_semana${week}_kit.pdf 2> /tmp/pdfunite.err && rm -f /tmp/*[0-9].pdf
+retval_pdfunite=$?
+
+if [ $retval_pdfunite -eq 0 ]; then
+    mv /tmp/ano${serie}_semana${week}_kit.pdf $dir
+    echo "This is your document - [${dir}/ano${serie}_semana${week}_kit.pdf]"
+	evince ${dir}/ano${serie}_semana${week}_kit.pdf 
+	
+elif [ $retval_pdfunite -eq 99 ]; then
+    echo ""
+    echo "Something is wrong, please check this log:"
+	echo "------------------------------------------"
+    echo "Dont have documents to join."
+else
+    echo ""
+    echo "Something is wrong, please check this log:"
+	echo "------------------------------------------"
+	grep -i semana /tmp/pdfunite.err && rm -f /tmp/pdfunite.err
+fi
