@@ -61,9 +61,9 @@ pdfunite $(ls /tmp/*[0-9].pdf 2> /dev/null) /tmp/ano${serie}_semana${week}_kit.p
 retval_pdfunite=$?
 
 if [ $retval_pdfunite -eq 0 ]; then
-    mv /tmp/ano${serie}_semana${week}_kit.pdf $dir
+    mv /tmp/ano${serie}_semana${week}_kit.pdf "$dir"
     echo "This is your document - [${dir}/ano${serie}_semana${week}_kit.pdf]"
-	evince ${dir}/ano${serie}_semana${week}_kit.pdf 
+	evince "${dir}/ano${serie}_semana${week}_kit.pdf" 
 	
 elif [ $retval_pdfunite -eq 99 ]; then
     echo ""
